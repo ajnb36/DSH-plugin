@@ -132,10 +132,16 @@ function fakeContext({ chat, calls, running = false }) {
     },
     conversation: {
       input: {
-        for: scope => ({
-          setDraft: (text) => { calls.push(['setDraft', scope.id, text]) },
-          notify: (level, text) => { calls.push(['notify', scope.id, level, text]) },
-        }),
+        for: (scope) => {
+          const id = scope.id ?? sessionId
+          return {
+            setDraft: (text) => { calls.push(['setDraft', id, text]) },
+            notify: (level, text) => { calls.push(['notify', id, level, text]) },
+            notices: {
+              set: (value) => { calls.push(['setNotice', id, value]) },
+            },
+          }
+        },
       },
     },
     uiConversation: {
@@ -174,7 +180,9 @@ test('clicking the injected button forks at the previous turn/end and refills th
         <div class="stack"><div class="bubble">这条发错会话了</div></div>
         <div class="actions"><span class="time">10:00</span><button aria-label="copy"></button></div>
       </div>
-    </div>`
+    </div>
+    <div role="status">已回退到此消息；原会话保留为分支，可在侧栏找到。</div>
+    <div data-composer-card><textarea></textarea></div>`
 
   const previous = {
     window: globalThis.window,
@@ -205,6 +213,16 @@ test('clicking the injected button forks at the previous turn/end and refills th
 
     const button = await waitForButton()
     assert.equal(button.getAttribute('aria-label'), '回退到此消息')
+
+    const close = window.document.querySelector('button[data-dsh-redo-notice-close]')
+    assert.notEqual(close, null)
+    assert.equal(close.getAttribute('aria-label'), '关闭提示')
+    close.click()
+    assert.ok(
+      calls.some(call => call[0] === 'setNotice' && call[1] === 'session-1' && call[2] === null),
+      'the notice close button clears the Session notice store',
+    )
+
     button.click()
 
     for (let attempt = 0; attempt < 100; attempt += 1) {
