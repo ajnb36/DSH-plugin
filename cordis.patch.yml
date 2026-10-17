@@ -1,0 +1,5 @@
+# dsh-redo bundle patch: mount the Host half. The browser half (lib/client.js)
+# is discovered from this package's `dsh.client` declaration in package.json.
+- insert:
+    - id: redo
+      name: dsh-redo
